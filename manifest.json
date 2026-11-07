@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "id": "top0754687091",
+  "name": "消消乐",
+  "name_en": "Match 3",
+  "description": "中英文消消乐：交换相邻糖果，三连消除并完成关卡。",
+  "version": "1.0.0",
+  "min_platform_version": null,
+  "runtime": {
+    "type": "node",
+    "min_version": "24",
+    "extensions": []
+  },
+  "database": {
+    "type": "sqlite"
+  },
+  "entry": {
+    "public_dir": "",
+    "main": "server.js",
+    "router": null,
+    "health": "/__health",
+    "index": null
+  },
+  "scripts": {
+    "install": null,
+    "migrate": null,
+    "uninstall": null
+  },
+  "data": {
+    "dirs": [],
+    "schema_version": null
+  },
+  "startup": {
+    "auto_start": false
+  },
+  "ui": {
+    "icon": "icon.png",
+    "open_mode": "app_window",
+    "window": null
+  },
+  "author": null,
+  "license": null,
+  "homepage": null
+}
