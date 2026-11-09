@@ -3,13 +3,18 @@ export const COLS = 8;
 export const TYPES = 6;
 
 let nextId = 1;
+const BLOCKED = Object.freeze({ blocked: true });
+
+function isBoardCell(cell) {
+  return Boolean(cell && !cell.blocked);
+}
 
 export function makeCell(type, special = null, ice = 0) {
   return { id: nextId++, type, special, ice };
 }
 
 export function cloneBoard(board) {
-  return board.map((row) => row.map((cell) => (cell ? { ...cell } : null)));
+  return board.map((row) => row.map((cell) => (cell?.blocked ? BLOCKED : cell ? { ...cell } : null)));
 }
 
 export function inBounds(r, c) {
@@ -29,7 +34,7 @@ function addCollected(into, extra) {
 }
 
 function canMatch(cell) {
-  return Boolean(cell && cell.type != null && cell.ice <= 0);
+  return Boolean(isBoardCell(cell) && cell.type != null && cell.ice <= 0);
 }
 
 function keyOf(r, c) {
@@ -101,11 +106,12 @@ export function findRuns(board) {
   return runs;
 }
 
-function eachAdjacent(fn) {
+function eachAdjacent(board, fn) {
   for (let r = 0; r < ROWS; r += 1) {
     for (let c = 0; c < COLS; c += 1) {
-      if (c + 1 < COLS) fn({ r, c }, { r, c: c + 1 });
-      if (r + 1 < ROWS) fn({ r, c }, { r: r + 1, c });
+      if (!isBoardCell(board[r][c])) continue;
+      if (c + 1 < COLS && isBoardCell(board[r][c + 1])) fn({ r, c }, { r, c: c + 1 });
+      if (r + 1 < ROWS && isBoardCell(board[r + 1][c])) fn({ r, c }, { r: r + 1, c });
     }
   }
 }
@@ -121,14 +127,15 @@ function swapCells(board, a, b) {
 function isUsefulSwap(board, a, b) {
   const left = board[a.r][a.c];
   const right = board[b.r][b.c];
-  if (!left || !right) return false;
+  if (!isBoardCell(left) || !isBoardCell(right)) return false;
+  if (left.special && right.special) return true;
   if (left.special === 'color' || right.special === 'color') return true;
   return findRuns(swapCells(board, a, b)).length > 0;
 }
 
 export function findHint(board) {
   let found = null;
-  eachAdjacent((a, b) => {
+  eachAdjacent(board, (a, b) => {
     if (!found && isUsefulSwap(board, a, b)) found = { a, b };
   });
   return found;
@@ -199,7 +206,7 @@ function mostCommonType(board) {
 function effectCells(board, r, c, special) {
   const spots = [];
   const push = (rr, cc) => {
-    if (inBounds(rr, cc) && board[rr][cc]) spots.push({ r: rr, c: cc });
+    if (inBounds(rr, cc) && isBoardCell(board[rr][cc])) spots.push({ r: rr, c: cc });
   };
   if (special === 'h') {
     for (let cc = 0; cc < COLS; cc += 1) push(r, cc);
@@ -271,7 +278,7 @@ function applyClears(board, cleared, spawns) {
   for (const key of cleared) {
     const { r, c } = parseKey(key);
     const cell = next[r][c];
-    if (!cell) continue;
+    if (!isBoardCell(cell)) continue;
     if (cell.ice > 0) {
       cell.ice -= 1;
       continue;
@@ -294,12 +301,18 @@ function applyClears(board, cleared, spawns) {
 
 function applyGravity(board, rng) {
   for (let c = 0; c < COLS; c += 1) {
-    const stack = [];
-    for (let r = ROWS - 1; r >= 0; r -= 1) {
-      if (board[r][c]) stack.push(board[r][c]);
+    let start = 0;
+    while (start < ROWS) {
+      while (start < ROWS && board[start][c]?.blocked) start += 1;
+      if (start >= ROWS) break;
+      let end = start;
+      while (end + 1 < ROWS && !board[end + 1][c]?.blocked) end += 1;
+      const stack = [];
+      for (let r = end; r >= start; r -= 1) if (isBoardCell(board[r][c])) stack.push(board[r][c]);
+      while (stack.length < end - start + 1) stack.push(makeCell(pickType(rng, new Set())));
+      for (let r = end; r >= start; r -= 1) board[r][c] = stack[end - r];
+      start = end + 1;
     }
-    while (stack.length < ROWS) stack.push(makeCell(pickType(rng, new Set())));
-    for (let r = ROWS - 1; r >= 0; r -= 1) board[r][c] = stack[ROWS - 1 - r];
   }
   return board;
 }
@@ -355,9 +368,9 @@ function cellsOfType(board, type) {
 
 function addLine(set, board, spot, horizontal) {
   if (horizontal) {
-    for (let c = 0; c < COLS; c += 1) if (board[spot.r][c]) set.add(keyOf(spot.r, c));
+    for (let c = 0; c < COLS; c += 1) if (isBoardCell(board[spot.r][c])) set.add(keyOf(spot.r, c));
   } else {
-    for (let r = 0; r < ROWS; r += 1) if (board[r][spot.c]) set.add(keyOf(r, spot.c));
+    for (let r = 0; r < ROWS; r += 1) if (isBoardCell(board[r][spot.c])) set.add(keyOf(r, spot.c));
   }
 }
 
@@ -373,7 +386,7 @@ function activateColor(board, a, b, rng) {
 
   if (bombs.length === 2) {
     for (let r = 0; r < ROWS; r += 1) {
-      for (let c = 0; c < COLS; c += 1) if (board[r][c]) clear.add(keyOf(r, c));
+      for (let c = 0; c < COLS; c += 1) if (isBoardCell(board[r][c])) clear.add(keyOf(r, c));
     }
   } else {
     const other = left.special === 'color' ? right : left;
@@ -389,7 +402,7 @@ function activateColor(board, a, b, rng) {
           for (let dc = -1; dc <= 1; dc += 1) {
             const rr = spot.r + dr;
             const cc = spot.c + dc;
-            if (inBounds(rr, cc) && board[rr][cc]) clear.add(keyOf(rr, cc));
+            if (inBounds(rr, cc) && isBoardCell(board[rr][cc])) clear.add(keyOf(rr, cc));
           }
         }
       }
@@ -410,38 +423,100 @@ function activateColor(board, a, b, rng) {
     score: first.scoreGained + rest.score,
     collected,
     frames: [first, ...rest.frames],
+    comboName: bombs.length === 2 ? 'rainbowRainbow' : `rainbow${(left.special === 'color' ? right : left).special || 'Candy'}`,
   };
+}
+
+function activatePair(board, a, b, rng) {
+  const left = board[a.r][a.c];
+  const right = board[b.r][b.c];
+  const clear = new Set();
+  const addSquare = (center, radius) => {
+    for (let dr = -radius; dr <= radius; dr += 1) {
+      for (let dc = -radius; dc <= radius; dc += 1) {
+        const r = center.r + dr;
+        const c = center.c + dc;
+        if (inBounds(r, c) && isBoardCell(board[r][c])) clear.add(keyOf(r, c));
+      }
+    }
+  };
+  const addBand = (center, horizontal, radius) => {
+    for (let offset = -radius; offset <= radius; offset += 1) {
+      const row = center.r + (horizontal ? offset : 0);
+      const col = center.c + (horizontal ? 0 : offset);
+      if (!inBounds(row, col)) continue;
+      for (let i = 0; i < (horizontal ? COLS : ROWS); i += 1) {
+        const r = horizontal ? row : i;
+        const c = horizontal ? i : col;
+        if (isBoardCell(board[r][c])) clear.add(keyOf(r, c));
+      }
+    }
+  };
+
+  if (left.special === 'wrap' && right.special === 'wrap') {
+    addSquare(a, 2);
+    addSquare(b, 2);
+  } else if ((left.special === 'wrap' && ['h', 'v'].includes(right.special))
+    || (right.special === 'wrap' && ['h', 'v'].includes(left.special))) {
+    addBand(a, true, 1); addBand(a, false, 1);
+    addBand(b, true, 1); addBand(b, false, 1);
+  } else if (['h', 'v'].includes(left.special) && ['h', 'v'].includes(right.special)) {
+    addBand(a, true, 0); addBand(a, false, 0);
+    addBand(b, true, 0); addBand(b, false, 0);
+  } else {
+    return null;
+  }
+
+  const first = burst(board, clear, rng, new Set(), null, 1);
+  const rest = resolve(first.after, rng, null);
+  const collected = emptyCollected();
+  addCollected(collected, first.collected);
+  addCollected(collected, rest.collected);
+  const comboName = left.special === 'wrap' && right.special === 'wrap'
+    ? 'wrapWrap'
+    : left.special === 'wrap' || right.special === 'wrap' ? 'stripeWrap' : 'stripeStripe';
+  return { board: rest.board, score: first.scoreGained + rest.score, collected, frames: [first, ...rest.frames], comboName };
 }
 
 export function trySwap(board, a, b, rng) {
   if (!isAdjacent(a, b)) return { ok: false, board };
   const left = board[a.r]?.[a.c];
   const right = board[b.r]?.[b.c];
-  if (!left || !right) return { ok: false, board };
+  if (!isBoardCell(left) || !isBoardCell(right)) return { ok: false, board };
   const swapped = swapCells(board, a, b);
   const landedA = swapped[a.r][a.c];
   const landedB = swapped[b.r][b.c];
   if (landedA.special === 'color' || landedB.special === 'color') {
     return { ok: true, ...activateColor(swapped, a, b, rng) };
   }
+  if (landedA.special && landedB.special) {
+    const combo = activatePair(swapped, a, b, rng);
+    if (combo) return { ok: true, ...combo };
+  }
   if (!findRuns(swapped).length) return { ok: false, board };
   return { ok: true, ...resolve(swapped, rng, [b, a]) };
 }
 
-export function createBoard(rng, iceList = []) {
+export function createBoard(rng, iceList = [], layout = null) {
   let last = null;
   for (let attempt = 0; attempt < 30; attempt += 1) {
     const board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
     for (let r = 0; r < ROWS; r += 1) {
       for (let c = 0; c < COLS; c += 1) {
+        if (layout && layout[r]?.[c] !== '#') {
+          board[r][c] = BLOCKED;
+          continue;
+        }
         const forbidden = new Set();
-        if (c >= 2 && board[r][c - 1].type === board[r][c - 2].type) forbidden.add(board[r][c - 1].type);
-        if (r >= 2 && board[r - 1][c].type === board[r - 2][c].type) forbidden.add(board[r - 1][c].type);
+        if (c >= 2 && canMatch(board[r][c - 1]) && canMatch(board[r][c - 2])
+          && board[r][c - 1].type === board[r][c - 2].type) forbidden.add(board[r][c - 1].type);
+        if (r >= 2 && canMatch(board[r - 1][c]) && canMatch(board[r - 2][c])
+          && board[r - 1][c].type === board[r - 2][c].type) forbidden.add(board[r - 1][c].type);
         board[r][c] = makeCell(pickType(rng, forbidden));
       }
     }
     for (const ice of iceList) {
-      if (inBounds(ice.r, ice.c) && board[ice.r][ice.c]) board[ice.r][ice.c].ice = ice.hp;
+      if (inBounds(ice.r, ice.c) && isBoardCell(board[ice.r][ice.c])) board[ice.r][ice.c].ice = ice.hp;
     }
     last = board;
     if (findHint(board)) return board;
@@ -468,7 +543,7 @@ export function reshuffle(board, rng) {
     for (let r = 0; r < ROWS; r += 1) {
       for (let c = 0; c < COLS; c += 1) {
         const cell = next[r][c];
-        if (!cell || cell.special === 'color') continue;
+        if (!isBoardCell(cell) || cell.special === 'color') continue;
         pool.push(cell.type);
         spots.push(cell);
       }
@@ -482,7 +557,8 @@ export function reshuffle(board, rng) {
     });
     if (!findRuns(next).length && findHint(next)) return next;
   }
-  return createBoard(rng, iceListFrom(board));
+  const layout = board.map((row) => row.map((cell) => (cell?.blocked ? '.' : '#')).join(''));
+  return createBoard(rng, iceListFrom(board), layout);
 }
 
 export function iceLeft(board) {

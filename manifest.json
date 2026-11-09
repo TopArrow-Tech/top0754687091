@@ -1,10 +1,9 @@
 {
   "schema_version": 1,
   "id": "top0754687091",
-  "name": "消消乐",
-  "name_en": "Match 3",
+  "name": "消消乐 · 关卡扩充版",
+  "name_en": "Match 3 · Level Expansion",
   "description": "中英文消消乐：交换相邻糖果，三连消除并完成关卡。",
-  "version": "1.0.0",
   "min_platform_version": null,
   "runtime": {
     "type": "node",

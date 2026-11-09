@@ -49,6 +49,21 @@ export function mountGems(element) {
   gemsEl = element;
 }
 
+export function renderSlots(board) {
+  const slots = document.querySelector('.slots');
+  if (!slots) return;
+  slots.replaceChildren();
+  for (let r = 0; r < board.length; r += 1) {
+    for (let c = 0; c < board[r].length; c += 1) {
+      const slot = document.createElement('i');
+      slot.className = board[r][c]?.blocked ? 'void' : '';
+      slot.style.gridRow = String(r + 1);
+      slot.style.gridColumn = String(c + 1);
+      slots.appendChild(slot);
+    }
+  }
+}
+
 export function layoutBoard() {
   const layout = document.querySelector('.play-layout');
   const stage = document.querySelector('.stage');
@@ -92,7 +107,7 @@ export function renderBoard(board, { fall = false } = {}) {
   for (let r = 0; r < board.length; r += 1) {
     for (let c = 0; c < board[r].length; c += 1) {
       const cell = board[r][c];
-      if (!cell) continue;
+      if (!cell || cell.blocked) continue;
       const id = String(cell.id);
       seen.add(id);
       const old = previous.get(id);
