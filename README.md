@@ -11,6 +11,7 @@ Swap candies, match three, and clear eight levels.
 | Version | Author | About |
 | --- | --- | --- |
 | [Match 3](https://github.com/TopArrow-Tech/top0754687091) | [jiangting](https://www.toparrow.top/web/publisher/jiangting) | Match 3 is a casual puzzle you play on this computer, with no network required. Swap neighboring candies on an 8×8 board… [On TopArrow](https://www.toparrow.top/web/version/top0754687091-dz49rl) |
+| [Match 3 · Level Expansion](https://github.com/TopArrow-Tech/top0754687091/tree/top0754687091-5x7yt8) | [土木子申](https://www.toparrow.top/web/publisher/%E5%9C%9F%E6%9C%A8%E5%AD%90%E7%94%B3) | - 8 new levels, 16 in total - Every level has a different board sh - Check the map - goal and difficulty before playing … [On TopArrow](https://www.toparrow.top/web/version/top0754687091-5x7yt8) |
 
 ## Get the app
 
