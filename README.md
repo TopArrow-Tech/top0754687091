@@ -4,6 +4,8 @@ By [jiangting](https://www.toparrow.top/web/publisher/jiangting)
 
 Swap candies, match three, and clear eight levels.
 
+![screenshot](https://cos.toparrow.top/appscreenshot/20261115_809987f012f8ebc1.jpg)
+
 **Tags:** Candy Matching
 
 ## Versions
